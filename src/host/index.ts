@@ -18,6 +18,7 @@ type Handler = (args: Record<string, unknown>) => Promise<unknown>
 
 const HANDLERS: Record<string, Handler> = {
   categories: () => forum.categories(),
+  latest: () => forum.latest(),
   threads: (a) => forum.threads(a),
   post: (a) => forum.post(a),
   search: (a) => forum.search(a),

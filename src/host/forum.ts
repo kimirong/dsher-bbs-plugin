@@ -58,6 +58,14 @@ export interface RpcOk<T = unknown> { ok: true; [key: string]: unknown }
 export interface RpcErr { ok: false; error: string }
 export type Rpc<T = unknown> = RpcOk<T> | RpcErr
 
+export interface LatestPost {
+  id: number
+  title: string
+  categorySlug: string
+  author: string
+  replyCount: number
+}
+
 function decodeEntities(s: unknown): string {
   return String(s)
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
@@ -108,6 +116,31 @@ function parseThreadRows(html: string): ThreadRow[] {
       authorId: author[1] || '', author: decodeEntities(author[2] || ''),
       replyCount: reply[1] ? Number(reply[1]) : 0,
       time: time[1] || '',
+    })
+  }
+  return out
+}
+
+// 首页「最新讨论」区块（跨分类全站最新 10 帖，结构见 views/home.tsx：
+// <h2>最新讨论</h2> … <ul class="divide-y …"><li><a href="/forum/post/<id>">…）
+function parseLatestPosts(html: string): LatestPost[] {
+  const out: LatestPost[] = []
+  const section = (html.match(/<h2[^>]*>最新讨论<\/h2>([\s\S]*?)<\/section>/) || [])[1] ?? html
+  const re = /<li><a href="\/forum\/post\/(\d+)"[^>]*>([\s\S]*?)<\/a><\/li>/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(section))) {
+    const id = Number(m[1])
+    const block = m[2]
+    const title = (block.match(/<span class="truncate font-medium">([^<]*)<\/span>/) || [])[1]
+    const cat = (block.match(/text-accent-600[^"]*">([a-z0-9-]+)\//) || [])[1]
+    const author = (block.match(/text-accent-600[^"]*">[a-z0-9-]+\/<\/span>\s*<span>([^<]*)<\/span>/) || [])[1]
+    const reply = (block.match(/(\d+) 回复/) || [])[1]
+    out.push({
+      id,
+      title: decodeEntities(title || ''),
+      categorySlug: cat || '',
+      author: decodeEntities(author || ''),
+      replyCount: reply ? Number(reply) : 0,
     })
   }
   return out
@@ -213,6 +246,15 @@ export async function categories(): Promise<Rpc> {
   try {
     const html = await getText('/forum')
     return { ok: true, categories: parseCategories(html) }
+  } catch (e) {
+    return { ok: false, error: String((e as Error)?.message ?? e) }
+  }
+}
+
+export async function latest(): Promise<Rpc> {
+  try {
+    const html = await getText('/')
+    return { ok: true, posts: parseLatestPosts(html) }
   } catch (e) {
     return { ok: false, error: String((e as Error)?.message ?? e) }
   }

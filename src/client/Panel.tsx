@@ -60,6 +60,16 @@ const CSS = `
   .dsb-link { color: #0969da; cursor: pointer; text-decoration: none; }
   .dsb-link:hover { text-decoration: underline; }
   .dsb-searchbar { display: flex; gap: 8px; margin-bottom: 10px; }
+  .dsb-viewtabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .dsb-viewtab {
+    border: 1px solid var(--dsw-alias-border-l2, rgba(0,0,0,.2));
+    border-radius: 6px; padding: 5px 14px; font-size: 12px; font-weight: 600;
+    cursor: pointer; color: var(--dsw-alias-label-secondary, #57606a);
+    background: var(--dsw-alias-bg-layer-2, #ffffff);
+    transition: color .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .dsb-viewtab:hover { color: var(--dsw-alias-label-primary, #1f2328); border-color: var(--dsw-alias-border-l2, rgba(0,0,0,.35)); }
+  .dsb-viewtab.active { border-color: #0969da; color: #0969da; background: rgba(9,105,218,.12); }
   .dsb-uploading { color: var(--dsw-alias-label-secondary, #57606a); font-size: 12px; margin-top: 6px; }
   .dsb-fab {
     position: fixed; right: 18px; bottom: 18px; z-index: 9999;
@@ -329,8 +339,9 @@ function PostDetail({ id, cookie, onBack }: { id: number; cookie: string; onBack
   )
 }
 
-// ── 浏览视图（顶部集成搜索） ──────────────────────────────────────────
+// ── 浏览视图（最新讨论 / 版块 + 顶部搜索） ─────────────────────────────
 function BrowseView({ cookie, onOpenPost }: { cookie: string; onOpenPost: (id: number) => void }): JSX.Element {
+  const [view, setView] = useState<'latest' | 'forum'>('latest')
   const [cats, setCats] = useState<any[] | null>(null)
   const [slug, setSlug] = useState('general')
   const [q, setQ] = useState('')
@@ -341,6 +352,9 @@ function BrowseView({ cookie, onOpenPost }: { cookie: string; onOpenPost: (id: n
   const [searchState, setSearchState] = useState<{ done: boolean; loading: boolean; error: string; results: any[]; count: number }>({
     done: false, loading: false, error: '', results: [], count: 0,
   })
+  const [latestState, setLatestState] = useState<{ loading: boolean; error: string; posts: any[] }>({
+    loading: true, error: '', posts: [],
+  })
 
   useEffect(() => {
     void rpc('categories').then((r) => {
@@ -349,6 +363,11 @@ function BrowseView({ cookie, onOpenPost }: { cookie: string; onOpenPost: (id: n
         setCats(data.categories)
         setSlug(s => (data.categories!.some((c: any) => c.slug === s) ? s : data.categories![0].slug))
       }
+    })
+    void rpc('latest').then((r) => {
+      const data = r as { ok: boolean; posts?: any[]; error?: string }
+      if (data.ok) setLatestState({ loading: false, error: '', posts: data.posts || [] })
+      else setLatestState(st => ({ ...st, loading: false, error: data.error || '加载失败' }))
     })
   }, [])
 
@@ -360,7 +379,7 @@ function BrowseView({ cookie, onOpenPost }: { cookie: string; onOpenPost: (id: n
       else setState(st => ({ ...st, loading: false, error: data.error || '加载失败' }))
     })
   }
-  useEffect(() => { if (slug && !searching) loadThreads(slug) }, [slug, searching]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (slug && !searching && view === 'forum') loadThreads(slug) }, [slug, searching, view]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const goPage = (p: number): void => {
     if (p < 1 || p > state.totalPages) return
@@ -390,6 +409,11 @@ function BrowseView({ cookie, onOpenPost }: { cookie: string; onOpenPost: (id: n
 
   return (
     <div>
+      {/* 视图切换：最新讨论 / 版块 */}
+      <div className="dsb-viewtabs">
+        <span className={'dsb-viewtab' + (view === 'latest' ? ' active' : '')} onClick={() => setView('latest')}>最新讨论</span>
+        <span className={'dsb-viewtab' + (view === 'forum' ? ' active' : '')} onClick={() => setView('forum')}>版块</span>
+      </div>
       <div className="dsb-searchbar">
         <input
           className="dsb-input" placeholder="搜索帖子标题…" value={q}
@@ -399,16 +423,6 @@ function BrowseView({ cookie, onOpenPost }: { cookie: string; onOpenPost: (id: n
         <button className="dsb-btn primary" onClick={runSearch} disabled={searchState.loading}>搜索</button>
         {searching && <button className="dsb-btn" onClick={clearSearch}>取消</button>}
       </div>
-      {!searching && cats === null && <div className="dsb-loading">加载版块…</div>}
-      {!searching && cats && (
-        <div className="dsb-chips">
-          {cats.map((c: any) => (
-            <span key={c.slug} className={'dsb-chip' + (c.slug === slug ? ' active' : '')} onClick={() => setSlug(c.slug)}>
-              {c.name}
-            </span>
-          ))}
-        </div>
-      )}
       {searching ? (
         <div>
           {searchState.loading && <div className="dsb-loading">搜索中…</div>}
@@ -423,8 +437,30 @@ function BrowseView({ cookie, onOpenPost }: { cookie: string; onOpenPost: (id: n
             </div>
           ))}
         </div>
+      ) : view === 'latest' ? (
+        <div>
+          {latestState.loading && <div className="dsb-loading">加载最新讨论…</div>}
+          {latestState.error && <div className="dsb-error">{latestState.error}</div>}
+          {!latestState.loading && !latestState.error && latestState.posts.length === 0 && <div className="dsb-empty">还没有帖子，来发第一帖吧</div>}
+          {latestState.posts.map((t: any) => (
+            <div key={t.id} className="dsb-row" onClick={() => onOpenPost(t.id)}>
+              <div className="dsb-row-title">{t.title}</div>
+              <div className="dsb-row-meta">{`~/bbs/${t.categorySlug} · ${t.author} · ${t.replyCount} 回复`}</div>
+            </div>
+          ))}
+        </div>
       ) : (
         <div>
+          {cats === null && <div className="dsb-loading">加载版块…</div>}
+          {cats && (
+            <div className="dsb-chips">
+              {cats.map((c: any) => (
+                <span key={c.slug} className={'dsb-chip' + (c.slug === slug ? ' active' : '')} onClick={() => setSlug(c.slug)}>
+                  {c.name}
+                </span>
+              ))}
+            </div>
+          )}
           {state.loading && <div className="dsb-loading">加载帖子…</div>}
           {state.error && <div className="dsb-error">{state.error}</div>}
           {!state.loading && !state.error && state.threads.length === 0 && <div className="dsb-empty">这个版块还没有帖子</div>}
