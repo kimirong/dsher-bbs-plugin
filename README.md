@@ -1,6 +1,6 @@
-# dsher-bbs-plugin
-
-在 DeepSeek Harness Web UI 中集成 [bbs.dsher.cn](https://bbs.dsher.cn)（dsh 社区）的**正式 bundle 插件**：右下角悬浮入口，浏览 / 搜索 / 发帖 / 回帖 / 点赞 / 粘贴截图上传 / 一键登录，开箱即用。
+<p align="center">
+  <img src="./assets/readme/hero.svg" width="100%" alt="dsher-bbs-plugin — bbs.dsher.cn 社区面板：一条命令安装后右下角出现「dsher 社区」悬浮按钮，浏览 / 搜索 / 发帖 / 回帖 / 点赞 / 粘贴截图上传 / 一键登录" />
+</p>
 
 ## ✨ 一键安装
 
