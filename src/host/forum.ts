@@ -81,6 +81,14 @@ function sanitizeHtml(html: string): string {
     .replace(/href\s*=\s*["']javascript:[^"']*["']/gi, 'href="#"')
 }
 
+// 论坛正文里的相对资源路径（如 /uploads/u/... 图片）在面板里会被浏览器
+// 按 DSH 自身域名解析而 404，这里统一补全为论坛绝对地址。
+function absolutizeHtml(html: string): string {
+  return String(html)
+    .replace(/src="\/(?!\/)/g, `src="${BASE}/`)
+    .replace(/href="\/(?!\/)/g, `href="${BASE}/`)
+}
+
 function parseCategories(html: string): Category[] {
   const out: Category[] = []
   const re = /<a href="\/forum\/([a-z0-9-]+)" class="group block[^"]*">([\s\S]*?)<\/a>/g
@@ -168,7 +176,7 @@ function parsePost(html: string): PostDetail {
     title: decodeEntities(title || ''), category: cat || '',
     authorId: author[1] || '', author: decodeEntities(author[2] || ''),
     time: time || '', views: views ? Number(views) : 0,
-    contentHtml: sanitizeHtml((content || '').trim()),
+    contentHtml: absolutizeHtml(sanitizeHtml((content || '').trim())),
     liked: vote[1] === '♥', voteCount: vote[2] ? Number(vote[2]) : 0,
     replyCount: replyHeading ? Number(replyHeading) : 0,
   }
@@ -192,7 +200,7 @@ function parseComments(html: string): CommentRow[] {
       floor: floor ? Number(floor) : 0, time: time || '',
       parentId: parent[1] ? Number(parent[1]) : null,
       parentName: parent[2] ? decodeEntities(parent[2]) : null,
-      contentHtml: sanitizeHtml((content || '').trim()),
+      contentHtml: absolutizeHtml(sanitizeHtml((content || '').trim())),
       liked: vote[1] === '♥', voteCount: vote[2] ? Number(vote[2]) : 0,
     })
   }
