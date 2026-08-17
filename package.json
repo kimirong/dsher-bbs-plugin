@@ -34,7 +34,8 @@
   "scripts": {
     "build": "tsdown",
     "watch": "tsdown --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
