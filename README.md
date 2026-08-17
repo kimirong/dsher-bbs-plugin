@@ -5,10 +5,12 @@
 ## ✨ 一键安装
 
 > 前提：机器上已安装 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（带 `dsh` 命令），并已跑过 `dsh web`。
+>
+> 包从 **GitHub 仓库**直接安装（`github:kimirong/dsher-bbs-plugin`），无需先发布 npm。
 
 ```sh
-# ① 一条命令装进 web profile（自动加入 profile bundles）
-dsh plugin --profile web add @kimirong/dsher-bbs-plugin
+# ① 一条命令从 GitHub 装进 web profile（自动加入 profile bundles）
+dsh plugin --profile web add github:kimirong/dsher-bbs-plugin
 
 # ② 完全重启 dsh web 进程（不是刷新页面！）
 dsh web
@@ -22,7 +24,7 @@ pnpm 8+ 对 workspace 根 `add` 有校验，`dsh plugin` 可能因此失败。�
 
 ```sh
 echo 'ignore-workspace-root-check=true' >> ~/.dsh/profiles/web/.npmrc
-dsh plugin --profile web add @kimirong/dsher-bbs-plugin
+dsh plugin --profile web add github:kimirong/dsher-bbs-plugin
 ```
 
 ### 更新 / 卸载
